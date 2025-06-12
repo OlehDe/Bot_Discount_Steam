@@ -12,6 +12,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, time as dtime
 import asyncio
 
+from threading import Thread
+from flask import Flask
+
 TOKEN = "8061572609:AAHDDh11pyNLkhujAELqfEKb6DSu2YzZm1U"  # заміни на новий токен!
 
 
@@ -113,8 +116,22 @@ def schedule_daily_job(application):
     )
     scheduler.start()
 
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Steam Discount Bot is alive!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
 # Запуск бота
 if __name__ == "__main__":
+    keep_alive()
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
