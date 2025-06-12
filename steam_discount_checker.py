@@ -109,7 +109,7 @@ def schedule_daily_job(application):
         lambda: asyncio.create_task(send_daily_discounts(application)),
         trigger='cron',
         hour=19,
-        minute=10
+        minute=20
     )
     scheduler.start()
 
