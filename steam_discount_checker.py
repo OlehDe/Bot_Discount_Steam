@@ -8,6 +8,10 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 import time
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime, time as dtime
+import asyncio
+
 TOKEN = "8061572609:AAHDDh11pyNLkhujAELqfEKb6DSu2YzZm1U"  # заміни на новий токен!
 
 
@@ -86,6 +90,29 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         valheim_discount = get_valheim_discount()
         await query.edit_message_text(valheim_discount, parse_mode="HTML")
 
+async def send_daily_discounts(application):
+    games = get_discounted_games()
+    if games:
+        message = "🎮 <b>Щоденні знижки в Steam:</b>\n" + "\n".join(games)
+    else:
+        message = "Сьогодні немає знижок 😢"
+
+    await application.bot.send_message(
+        chat_id="1182819676",  # ← твій Chat ID
+        text=message,
+        parse_mode="HTML"
+    )
+
+def schedule_daily_job(application):
+    scheduler = BackgroundScheduler(timezone="Europe/Kyiv")
+    scheduler.add_job(
+        lambda: asyncio.create_task(send_daily_discounts(application)),
+        trigger='cron',
+        hour=19,
+        minute=10
+    )
+    scheduler.start()
+
 # Запуск бота
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
@@ -93,6 +120,8 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Regex('^Start$'), start))
     app.add_handler(CallbackQueryHandler(button_handler))
+
+    schedule_daily_job(app)
 
     print("✅ Бот запущено. Очікую команди /start...")
     app.run_polling()
