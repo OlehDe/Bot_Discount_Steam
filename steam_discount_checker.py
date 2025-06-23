@@ -64,12 +64,28 @@ def get_valheim_discount():
 
     return "Гру Valheim не знайдено 😢"
 
+def get_free_games():
+    url = "https://store.steampowered.com/api/featuredcategories?cc=ua&l=ukrainian"
+    response = requests.get(url).json()
+    discounted = response.get("specials", {}).get("items", [])
+
+    free_games = []
+    for game in discounted:
+        discount = game.get("discount_percent", 0)
+        if discount == 100:
+            name = game.get("name", "Без назви")
+            original_price = game.get("original_price", 0) / 100
+            free_games.append(f"{name}: 🎉 <b>Безкоштовно</b> (було {original_price}€)")
+
+    return free_games[:20]  # максимум 20
+
 
 # Стартова команда
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🎮 Показати знижки", callback_data="show_discounts")],
         [InlineKeyboardButton("🔨 Valheim", callback_data="show_valheim")]
+        [InlineKeyboardButton("🆓 Ігри 100%", callback_data="show_free_games")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Привіт! Натисни кнопку нижче, щоб побачити знижки на Steam:",
@@ -92,6 +108,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "show_valheim":
         valheim_discount = get_valheim_discount()
         await query.edit_message_text(valheim_discount, parse_mode="HTML")
+
+    elif query.data == "show_free_games":
+        free_games = get_free_games()
+        if free_games:
+            message = "🆓 <b>Ігри зі знижкою 100%:</b>\n" + "\n".join(free_games)
+        else:
+            message = "Зараз немає безкоштовних ігор 😢"
+        await query.edit_message_text(message, parse_mode="HTML")
+
 
 async def send_daily_discounts(application):
     games = get_discounted_games()
