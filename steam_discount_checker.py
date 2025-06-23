@@ -15,7 +15,7 @@ import asyncio
 from threading import Thread
 from flask import Flask
 
-TOKEN = "8061572609:AAHDDh11pyNLkhujAELqfEKb6DSu2YzZm1U"  # заміни на новий токен!
+TOKEN = "8061572609:AAEo_zTrZ1wy3x53JswwlQYpwogsmE7bkgg"  # заміни на новий токен!
 
 
 # Функція для отримання знижок зі Steam
