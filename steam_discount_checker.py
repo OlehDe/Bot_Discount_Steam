@@ -15,6 +15,8 @@ import asyncio
 from threading import Thread
 from flask import Flask
 
+from bs4 import BeautifulSoup
+
 TOKEN = "8061572609:AAEo_zTrZ1wy3x53JswwlQYpwogsmE7bkgg"  # заміни на новий токен!
 
 
@@ -79,30 +81,39 @@ def get_free_games():
 
     return free_games[:20]  # максимум 20
 
-def get_90_discount_games():
-    games_on_sale = []
-    page = 0
-    max_pages = 5  # щоб не перевищити ліміт API
+def get_90_discount_games_from_page(offset=0):
+    url = f"https://store.steampowered.com/specials/?l=ukrainian&offset={offset}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, "html.parser")
 
-    while page < max_pages:
-        url = f"https://store.steampowered.com/api/storesearch/?cc=ua&l=ukrainian&specials=1&page={page}"
-        response = requests.get(url).json()
-        items = response.get("items", [])
+    game_blocks = soup.select(".tab_item")
+    result = []
 
-        if not items:
-            break
+    for block in game_blocks:
+        title = block.select_one(".tab_item_name").get_text(strip=True)
+        discount_block = block.select_one(".discount_pct")
+        if not discount_block:
+            continue
+        discount_text = discount_block.get_text(strip=True).replace("-", "").replace("%", "")
+        try:
+            discount_percent = int(discount_text)
+        except ValueError:
+            continue
 
-        for game in items:
-            discount = game.get("discount_percent", 0)
-            if discount >= 90:
-                name = game.get("name", "Без назви")
-                price = game.get("final_price", 0) / 100
-                old_price = game.get("original_price", 0) / 100
-                games_on_sale.append(f"{name}: -{discount}% → {price}€ (було {old_price}€)")
+        if discount_percent >= 90:
+            old_price = block.select_one(".discount_original_price").get_text(strip=True)
+            final_price = block.select_one(".discount_final_price").get_text(strip=True)
+            result.append(f"{title}: -{discount_percent}% → {final_price} (було {old_price})")
 
-        page += 1
+    return result
 
-    return games_on_sale[:20]
+def get_all_90_discount_games():
+    all_games = []
+    for offset in range(0, 240, 60):  # offset: 0, 60, 120, 180, 240
+        games = get_90_discount_games_from_page(offset)
+        all_games.extend(games)
+    return all_games[:20]  # максимум 20 найвигідніших
 
 
 # Стартова команда
@@ -111,8 +122,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🎮 Показати знижки", callback_data="show_discounts")],
         [InlineKeyboardButton("🔨 Valheim", callback_data="show_valheim")],
         [InlineKeyboardButton("🆓 Ігри 100%", callback_data="show_free_games")],
-        [InlineKeyboardButton("💯 Знижка 90%", callback_data="show_90_discounts")],
-        [InlineKeyboardButton("💯 Знижка 90%", callback_data="show_90_discounts")]
+        [InlineKeyboardButton("💯 Знижка 90%", callback_data="get_all_90_discount_games")],
+        [InlineKeyboardButton("💯 Знижка з 90%", callback_data="get_90_discount_games_from_page")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Привіт! Натисни кнопку нижче, щоб побачити знижки на Steam:",
@@ -144,8 +155,16 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message = "Зараз немає безкоштовних ігор 😢"
         await query.edit_message_text(message, parse_mode="HTML")
 
+    elif query.data == "get_all_90_discount":
+        games = get_all_90_discount_games()
+        if games:
+            message = "💯 <b>Ігри зі знижкою 90% і більше:</b>\n" + "\n".join(games)
+        else:
+            message = "Зараз немає ігор зі знижкою 90% 😢"
+        await query.edit_message_text(message, parse_mode="HTML")
+
     elif query.data == "show_90_discounts":
-        games = get_90_discount_games()
+        games = get_all_90_discount_games()
         if games:
             message = "💯 <b>Ігри зі знижкою 90% і більше:</b>\n" + "\n".join(games)
         else:
