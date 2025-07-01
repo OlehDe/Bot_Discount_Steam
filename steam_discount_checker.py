@@ -20,7 +20,7 @@ TOKEN = "8061572609:AAEo_zTrZ1wy3x53JswwlQYpwogsmE7bkgg"  # заміни на н
 
 # Функція для отримання знижок зі Steam
 def get_discounted_games():
-    url = "https://store.steampowered.com/api/featuredcategories?cc=ua&l=ukrainian"
+    url = "https://store.steampowered.com/api/featuredcategories?cc=ua&l"
     response = requests.get(url).json()
     discounted = response.get("specials", {}).get("items", [])
 
@@ -37,7 +37,7 @@ def get_discounted_games():
 
 # Функція для отримання знижки на конкретну гру (Valheim)
 def get_valheim_discount():
-    url = "https://store.steampowered.com/api/storesearch/?term=Valheim&cc=ua&l=ukrainian"
+    url = "https://store.steampowered.com/api/storesearch/?term=Valheim&cc=ua&l"
     response = requests.get(url).json()
     games = response.get("items", [])
 
@@ -65,7 +65,7 @@ def get_valheim_discount():
     return "Гру Valheim не знайдено 😢"
 
 def get_free_games():
-    url = "https://store.steampowered.com/api/featuredcategories?cc=ua&l=ukrainian"
+    url = "https://store.steampowered.com/api/featuredcategories?cc=ua&l"
     response = requests.get(url).json()
     discounted = response.get("specials", {}).get("items", [])
 
@@ -80,7 +80,7 @@ def get_free_games():
     return free_games[:20]  # максимум 20
 
 def get_90_discount_games():
-    url = "https://store.steampowered.com/api/featuredcategories?cc=ua&l=ukrainian"
+    url = "https://store.steampowered.com/api/featuredcategories?cc=ua&l"
     response = requests.get(url).json()
     discounted = response.get("specials", {}).get("items", [])
 
