@@ -112,6 +112,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔨 Valheim", callback_data="show_valheim")],
         [InlineKeyboardButton("🆓 Ігри 100%", callback_data="show_free_games")],
         [InlineKeyboardButton("💯 Знижка 90%", callback_data="show_90_discounts")],
+        [InlineKeyboardButton("💯 Знижка 90%", callback_data="show_90_discounts")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Привіт! Натисни кнопку нижче, щоб побачити знижки на Steam:",
