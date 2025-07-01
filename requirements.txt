@@ -1,4 +1,5 @@
 python-telegram-bot==22.1
-requests
-apscheduler
-flask
+requests~=2.32.3
+apscheduler~=3.11.0
+flask~=3.1.0
+beautifulsoup4~=4.13.4
