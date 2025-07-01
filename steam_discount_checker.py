@@ -79,6 +79,22 @@ def get_free_games():
 
     return free_games[:20]  # максимум 20
 
+def get_90_discount_games():
+    url = "https://store.steampowered.com/api/featuredcategories?cc=ua&l=ukrainian"
+    response = requests.get(url).json()
+    discounted = response.get("specials", {}).get("items", [])
+
+    big_discounts = []
+    for game in discounted:
+        discount = game.get("discount_percent", 0)
+        if discount >= 90:
+            name = game.get("name", "Без назви")
+            price = game.get("final_price", 0) / 100
+            old_price = game.get("original_price", 0) / 100
+            big_discounts.append(f"{name}: -{discount}% → {price}€ (було {old_price}€)")
+
+    return big_discounts[:20]
+
 
 # Стартова команда
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -86,6 +102,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🎮 Показати знижки", callback_data="show_discounts")],
         [InlineKeyboardButton("🔨 Valheim", callback_data="show_valheim")],
         [InlineKeyboardButton("🆓 Ігри 100%", callback_data="show_free_games")],
+        [InlineKeyboardButton("💯 Знижка 90%", callback_data="show_90_discounts")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Привіт! Натисни кнопку нижче, щоб побачити знижки на Steam:",
@@ -115,6 +132,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message = "🆓 <b>Ігри зі знижкою 100%:</b>\n" + "\n".join(free_games)
         else:
             message = "Зараз немає безкоштовних ігор 😢"
+        await query.edit_message_text(message, parse_mode="HTML")
+
+    elif query.data == "show_90_discounts":
+        games = get_90_discount_games()
+        if games:
+            message = "💯 <b>Ігри зі знижкою 90% і більше:</b>\n" + "\n".join(games)
+        else:
+            message = "Зараз немає ігор зі знижкою 90% 😢"
         await query.edit_message_text(message, parse_mode="HTML")
 
 
