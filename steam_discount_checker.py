@@ -80,20 +80,29 @@ def get_free_games():
     return free_games[:20]  # максимум 20
 
 def get_90_discount_games():
-    url = "https://store.steampowered.com/api/featuredcategories?cc=ua&l"
-    response = requests.get(url).json()
-    discounted = response.get("specials", {}).get("items", [])
+    games_on_sale = []
+    page = 0
+    max_pages = 5  # щоб не перевищити ліміт API
 
-    big_discounts = []
-    for game in discounted:
-        discount = game.get("discount_percent", 0)
-        if discount >= 90:
-            name = game.get("name", "Без назви")
-            price = game.get("final_price", 0) / 100
-            old_price = game.get("original_price", 0) / 100
-            big_discounts.append(f"{name}: -{discount}% → {price}€ (було {old_price}€)")
+    while page < max_pages:
+        url = f"https://store.steampowered.com/api/storesearch/?cc=ua&l=ukrainian&specials=1&page={page}"
+        response = requests.get(url).json()
+        items = response.get("items", [])
 
-    return big_discounts[:20]
+        if not items:
+            break
+
+        for game in items:
+            discount = game.get("discount_percent", 0)
+            if discount >= 90:
+                name = game.get("name", "Без назви")
+                price = game.get("final_price", 0) / 100
+                old_price = game.get("original_price", 0) / 100
+                games_on_sale.append(f"{name}: -{discount}% → {price}€ (було {old_price}€)")
+
+        page += 1
+
+    return games_on_sale[:20]
 
 
 # Стартова команда
