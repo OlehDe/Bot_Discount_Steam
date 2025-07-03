@@ -66,54 +66,53 @@ def get_valheim_discount():
 
     return "Гру Valheim не знайдено 😢"
 
+
 def get_free_games():
-    url = "https://store.steampowered.com/api/featuredcategories?cc=ua&l"
-    response = requests.get(url).json()
-    discounted = response.get("specials", {}).get("items", [])
+    url = "https://store.steampowered.com/search/results/?query&start=0&count=50&dynamic_data=&sort_by=_ASC&snr=1_7_7_7000_7&filter=priceover0&maxprice=free&specials=1&infinite=1"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(url, headers=headers).json()
+    soup = BeautifulSoup(response['results_html'], 'html.parser')
 
     free_games = []
-    for game in discounted:
-        discount = game.get("discount_percent", 0)
-        if discount == 100:
-            name = game.get("name", "Без назви")
-            original_price = game.get("original_price", 0) / 100
-            free_games.append(f"{name}: 🎉 <b>Безкоштовно</b> (було {original_price}€)")
+    for game in soup.select('a.search_result_row'):
+        title = game.select_one('.title').text.strip()
+        price_block = game.select_one('.search_price')
+        if price_block:
+            original_price = price_block.text.strip().split(' ')[
+                -1] if ' ' in price_block.text.strip() else price_block.text.strip()
+            free_games.append(f"{title}: 🎉 <b>Безкоштовно</b> (було {original_price})")
 
-    return free_games[:20]  # максимум 20
+    return free_games[:20]
 
-def get_90_discount_games_from_page(offset=0):
-    url = f"https://store.steampowered.com/specials/?l=ukrainian&offset={offset}"
+
+def get_90_discount_games():
+    url = "https://store.steampowered.com/search/results/?query&start=0&count=50&dynamic_data=&sort_by=_ASC&snr=1_7_7_7000_7&filter=priceover0&specials=1&infinite=1"
     headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.text, "html.parser")
+    response = requests.get(url, headers=headers).json()
+    soup = BeautifulSoup(response['results_html'], 'html.parser')
 
-    game_blocks = soup.select(".tab_item")
-    result = []
+    discount_games = []
+    for game in soup.select('a.search_result_row'):
+        discount_block = game.select_one('.search_discount')
+        if discount_block:
+            discount_text = discount_block.text.strip().replace('-', '').replace('%', '')
+            try:
+                discount = int(discount_text)
+            except ValueError:
+                continue
 
-    for block in game_blocks:
-        title = block.select_one(".tab_item_name").get_text(strip=True)
-        discount_block = block.select_one(".discount_pct")
-        if not discount_block:
-            continue
-        discount_text = discount_block.get_text(strip=True).replace("-", "").replace("%", "")
-        try:
-            discount_percent = int(discount_text)
-        except ValueError:
-            continue
+            if discount >= 90:
+                title = game.select_one('.title').text.strip()
+                final_price = game.select_one('.search_price').text.strip().split(' ')[-1]
+                original_price = game.select('.search_price del')
+                if original_price:
+                    original_price = original_price[0].text.strip()
+                else:
+                    original_price = final_price  # якщо немає старої ціни, використовуємо фінальну
 
-        if discount_percent >= 90:
-            old_price = block.select_one(".discount_original_price").get_text(strip=True)
-            final_price = block.select_one(".discount_final_price").get_text(strip=True)
-            result.append(f"{title}: -{discount_percent}% → {final_price} (було {old_price})")
+                discount_games.append(f"{title}: -{discount}% → {final_price} (було {original_price})")
 
-    return result
-
-def get_all_90_discount_games():
-    all_games = []
-    for offset in range(0, 240, 60):  # offset: 0, 60, 120, 180, 240
-        games = get_90_discount_games_from_page(offset)
-        all_games.extend(games)
-    return all_games[:20]  # максимум 20 найвигідніших
+    return discount_games[:20]
 
 
 # Стартова команда
@@ -122,8 +121,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🎮 Показати знижки", callback_data="show_discounts")],
         [InlineKeyboardButton("🔨 Valheim", callback_data="show_valheim")],
         [InlineKeyboardButton("🆓 Ігри 100%", callback_data="show_free_games")],
-        [InlineKeyboardButton("💯 Знижка 90%", callback_data="get_all_90_discount_games")],
-        [InlineKeyboardButton("💯 Знижка з 90%", callback_data="get_90_discount_games_from_page")],
+        [InlineKeyboardButton("💯 Знижка 90%+", callback_data="show_90_discounts")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Привіт! Натисни кнопку нижче, щоб побачити знижки на Steam:",
@@ -155,16 +153,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message = "Зараз немає безкоштовних ігор 😢"
         await query.edit_message_text(message, parse_mode="HTML")
 
-    elif query.data == "get_all_90_discount":
-        games = get_all_90_discount_games()
-        if games:
-            message = "💯 <b>Ігри зі знижкою 90% і більше:</b>\n" + "\n".join(games)
-        else:
-            message = "Зараз немає ігор зі знижкою 90% 😢"
-        await query.edit_message_text(message, parse_mode="HTML")
-
     elif query.data == "show_90_discounts":
-        games = get_all_90_discount_games()
+        games = get_90_discount_games()
         if games:
             message = "💯 <b>Ігри зі знижкою 90% і більше:</b>\n" + "\n".join(games)
         else:
@@ -185,6 +175,7 @@ async def send_daily_discounts(application):
         parse_mode="HTML"
     )
 
+
 def schedule_daily_job(application):
     scheduler = BackgroundScheduler(timezone="Europe/Kyiv")
     scheduler.add_job(
@@ -195,18 +186,23 @@ def schedule_daily_job(application):
     )
     scheduler.start()
 
+
 app = Flask('')
+
 
 @app.route('/')
 def home():
     return "Steam Discount Bot is alive!"
 
+
 def run():
     app.run(host='0.0.0.0', port=8080)
+
 
 def keep_alive():
     t = Thread(target=run)
     t.start()
+
 
 # Запуск бота
 if __name__ == "__main__":
@@ -221,6 +217,3 @@ if __name__ == "__main__":
 
     print("✅ Бот запущено. Очікую команди /start...")
     app.run_polling()
-
-#8061572609:AAHDDh11pyNLkhujAELqfEKb6DSu2YzZm1U
-#'chat': {'id': 1182819676}
