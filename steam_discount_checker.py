@@ -96,7 +96,7 @@ def get_free_games():
 
 
 def get_90_discount_games():
-    url = "https://store.steampowered.com/search/results/?query&start=0&count=20&dynamic_data=&sort_by=_ASC&snr=1_7_7_7000_7&specials=1&infinite=1&filter=priceover0"
+    url = "https://store.steampowered.com/sale/special_deals"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
         "Accept-Language": "uk-UA,uk;q=0.9"
@@ -105,32 +105,50 @@ def get_90_discount_games():
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
-        data = response.json()
-        soup = BeautifulSoup(data['results_html'], 'html.parser')
+        soup = BeautifulSoup(response.text, 'html.parser')
 
         discount_games = []
-        for game in soup.select('a.search_result_row'):
-            discount_block = game.select_one('.search_discount')
-            if discount_block:
-                discount_text = discount_block.text.strip().replace('-', '').replace('%', '')
-                try:
-                    discount = int(discount_text)
-                except ValueError:
-                    continue
 
-                if discount >= 90:
-                    title = game.select_one('.title').text.strip()
-                    price_block = game.select_one('.search_price')
-                    final_price = price_block.text.strip().split(' ')[-1]
+        # Знаходимо всі блоки з іграми
+        game_blocks = soup.select('.salepreviewwidgets_StoreSaleWidgetContainer')
 
-                    original_price = price_block.find('span', {'style': 'color: #888888;'})
-                    original_price = original_price.text.strip() if original_price else final_price
+        for block in game_blocks:
+            # Отримуємо відсоток знижки
+            discount_block = block.select_one('.salepreviewwidgets_StoreSaleDiscountBox')
+            if not discount_block:
+                continue
 
-                    discount_games.append(f"{title}: -{discount}% → {final_price} (було {original_price})")
+            discount_text = discount_block.text.strip().replace('-', '').replace('%', '')
+            try:
+                discount = int(discount_text)
+            except ValueError:
+                continue
 
-        return discount_games if discount_games else None
+            # Перевіряємо, чи знижка 90% або більше
+            if discount >= 90:
+                # Отримуємо назву гри
+                title_block = block.select_one('.salepreviewwidgets_StoreSaleWidgetTitle')
+                title = title_block.text.strip() if title_block else "Без назви"
+
+                # Отримуємо ціни
+                final_price_block = block.select_one('.salepreviewwidgets_StoreOriginalPrice')
+                final_price = final_price_block.text.strip() if final_price_block else "?"
+
+                original_price_block = block.select_one('.salepreviewwidgets_StoreDiscountedPrice')
+                original_price = original_price_block.text.strip() if original_price_block else final_price
+
+                # Отримуємо посилання на гру
+                game_link = block.find('a', href=True)
+                if game_link:
+                    link = game_link['href'].split('?')[0]  # Беремо чистий URL без параметрів
+                    title = f'<a href="{link}">{title}</a>'
+
+                discount_games.append(f"{title}: -{discount}% → {final_price} (було {original_price})")
+
+        return discount_games[:20] if discount_games else None
+
     except Exception as e:
-        print(f"Помилка при отриманні ігор зі знижкою: {e}")
+        print(f"Помилка при отриманні ігор зі знижкою 90%: {e}")
         return None
 
 
