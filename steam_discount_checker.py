@@ -68,51 +68,70 @@ def get_valheim_discount():
 
 
 def get_free_games():
-    url = "https://store.steampowered.com/search/results/?query&start=0&count=50&dynamic_data=&sort_by=_ASC&snr=1_7_7_7000_7&filter=priceover0&maxprice=free&specials=1&infinite=1"
-    headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(url, headers=headers).json()
-    soup = BeautifulSoup(response['results_html'], 'html.parser')
+    url = "https://store.steampowered.com/search/results/?query&start=0&count=20&dynamic_data=&sort_by=_ASC&snr=1_7_7_7000_7&maxprice=free&specials=1&infinite=1"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Accept-Language": "uk-UA,uk;q=0.9"
+    }
 
-    free_games = []
-    for game in soup.select('a.search_result_row'):
-        title = game.select_one('.title').text.strip()
-        price_block = game.select_one('.search_price')
-        if price_block:
-            original_price = price_block.text.strip().split(' ')[
-                -1] if ' ' in price_block.text.strip() else price_block.text.strip()
-            free_games.append(f"{title}: 🎉 <b>Безкоштовно</b> (було {original_price})")
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        soup = BeautifulSoup(data['results_html'], 'html.parser')
 
-    return free_games[:20]
+        free_games = []
+        for game in soup.select('a.search_result_row'):
+            title = game.select_one('.title').text.strip()
+            price_block = game.select_one('.search_price')
+            if price_block:
+                original_price = price_block.find('span', {'style': 'color: #888888;'})
+                original_price = original_price.text.strip() if original_price else "?"
+                free_games.append(f"{title}: 🎉 <b>Безкоштовно</b> (було {original_price})")
+
+        return free_games if free_games else None
+    except Exception as e:
+        print(f"Помилка при отриманні безкоштовних ігор: {e}")
+        return None
 
 
 def get_90_discount_games():
-    url = "https://store.steampowered.com/search/results/?query&start=0&count=50&dynamic_data=&sort_by=_ASC&snr=1_7_7_7000_7&filter=priceover0&specials=1&infinite=1"
-    headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(url, headers=headers).json()
-    soup = BeautifulSoup(response['results_html'], 'html.parser')
+    url = "https://store.steampowered.com/search/results/?query&start=0&count=20&dynamic_data=&sort_by=_ASC&snr=1_7_7_7000_7&specials=1&infinite=1&filter=priceover0"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Accept-Language": "uk-UA,uk;q=0.9"
+    }
 
-    discount_games = []
-    for game in soup.select('a.search_result_row'):
-        discount_block = game.select_one('.search_discount')
-        if discount_block:
-            discount_text = discount_block.text.strip().replace('-', '').replace('%', '')
-            try:
-                discount = int(discount_text)
-            except ValueError:
-                continue
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        soup = BeautifulSoup(data['results_html'], 'html.parser')
 
-            if discount >= 90:
-                title = game.select_one('.title').text.strip()
-                final_price = game.select_one('.search_price').text.strip().split(' ')[-1]
-                original_price = game.select('.search_price del')
-                if original_price:
-                    original_price = original_price[0].text.strip()
-                else:
-                    original_price = final_price  # якщо немає старої ціни, використовуємо фінальну
+        discount_games = []
+        for game in soup.select('a.search_result_row'):
+            discount_block = game.select_one('.search_discount')
+            if discount_block:
+                discount_text = discount_block.text.strip().replace('-', '').replace('%', '')
+                try:
+                    discount = int(discount_text)
+                except ValueError:
+                    continue
 
-                discount_games.append(f"{title}: -{discount}% → {final_price} (було {original_price})")
+                if discount >= 90:
+                    title = game.select_one('.title').text.strip()
+                    price_block = game.select_one('.search_price')
+                    final_price = price_block.text.strip().split(' ')[-1]
 
-    return discount_games[:20]
+                    original_price = price_block.find('span', {'style': 'color: #888888;'})
+                    original_price = original_price.text.strip() if original_price else final_price
+
+                    discount_games.append(f"{title}: -{discount}% → {final_price} (було {original_price})")
+
+        return discount_games if discount_games else None
+    except Exception as e:
+        print(f"Помилка при отриманні ігор зі знижкою: {e}")
+        return None
 
 
 # Стартова команда
