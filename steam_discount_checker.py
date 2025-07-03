@@ -151,6 +151,10 @@ def get_90_discount_games():
         print(f"Помилка при отриманні ігор зі знижкою 90%: {e}")
         return None
 
+def show_rozdacha():
+    url = "https://store.steampowered.com/sale/special_deals"
+    message = f"Розпродажі {url}"
+    print(message)
 
 # Стартова команда
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -159,6 +163,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔨 Valheim", callback_data="show_valheim")],
         [InlineKeyboardButton("🆓 Ігри 100%", callback_data="show_free_games")],
         [InlineKeyboardButton("💯 Знижка 90%+", callback_data="show_90_discounts")],
+        [InlineKeyboardButton("👌 Розпродажі", callback_data="show_90_discounts")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Привіт! Натисни кнопку нижче, щоб побачити знижки на Steam:",
