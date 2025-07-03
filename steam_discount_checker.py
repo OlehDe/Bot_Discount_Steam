@@ -39,32 +39,44 @@ def get_discounted_games():
 
 # Функція для отримання знижки на конкретну гру (Valheim)
 def get_valheim_discount():
-    url = "https://store.steampowered.com/api/storesearch/?term=Valheim&cc=ua&l"
-    response = requests.get(url).json()
-    games = response.get("items", [])
+    url = "https://store.steampowered.com/api/storesearch/?term=Valheim&cc=ua&l=uk"
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Language": "uk-UA,uk;q=0.9"
+    }
 
-    steam_link = "https://store.steampowered.com/app/892970/Valheim/"
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        games = response.json().get("items", [])
 
-    for game in games:
-        if "Valheim" in game.get("name", ""):
-            discount = game.get("discount_percent", 0)
-            final_price = game.get("final_price")
-            original_price = game.get("original_price")
+        steam_link = "https://store.steampowered.com/app/892970/Valheim/"
 
-            # Клікабельна назва з посиланням
-            game_name_linked = f'<a href="{steam_link}">Valheim</a>'
+        for game in games:
+            if "Valheim" in game.get("name", ""):
+                discount = game.get("discount_percent", 0)
+                final_price = game.get("final_price")
+                original_price = game.get("original_price")
+                currency = game.get("price_currency", "₴")  # за замовчуванням гривня
 
-            if final_price is not None:
-                price = final_price / 100
-                if discount > 0 and original_price is not None:
-                    old_price = original_price / 100
-                    return f"{game_name_linked}: -{discount}% → {price}€ (було {old_price}€)"
+                # Клікабельна назва з посиланням
+                game_name_linked = f'<a href="{steam_link}">Valheim</a>'
+
+                if final_price is not None:
+                    price = final_price / 100
+                    if discount > 0 and original_price:
+                        old_price = original_price / 100
+                        return f"{game_name_linked}: -{discount}% → {price}{currency} (було {old_price}{currency})"
+                    else:
+                        return f"{game_name_linked}: {price}{currency} (без знижки)"
                 else:
-                    return f"{game_name_linked}: {price}€ (без знижки)"
-            else:
-                return f"{game_name_linked}: ціна недоступна 😢"
+                    return f"{game_name_linked}: ціна недоступна 😢"
 
-    return "Гру Valheim не знайдено 😢"
+        return "Гру Valheim не знайдено 😢"
+
+    except Exception as e:
+        print(f"Помилка при отриманні знижки для Valheim: {e}")
+        return "Сталася помилка при запиті 😢"
 
 
 def get_free_games():
@@ -98,9 +110,8 @@ def get_free_games():
         print(f"Помилка при отриманні безкоштовних ігор: {e}")
         return None
 
-
 def get_90_discount_games():
-    url = "https://store.steampowered.com/sale/special_deals"
+    url = "https://store.steampowered.com/search/results/?query&start=0&count=50&dynamic_data=&sort_by=Discount_DESC&snr=1_7_7_230_7&specials=1&infinite=1"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
         "Accept-Language": "uk-UA,uk;q=0.9"
@@ -109,47 +120,30 @@ def get_90_discount_games():
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
+        data = response.json()
+        soup = BeautifulSoup(data['results_html'], 'html.parser')
 
         discount_games = []
 
-        # Знаходимо всі блоки з іграми
-        game_blocks = soup.select('.salepreviewwidgets_StoreSaleWidgetContainer')
-
-        for block in game_blocks:
-            # Отримуємо відсоток знижки
-            discount_block = block.select_one('.salepreviewwidgets_StoreSaleDiscountBox')
+        for game in soup.select('a.search_result_row'):
+            title = game.select_one('.title').text.strip()
+            discount_block = game.select_one('.search_discount_block')
             if not discount_block:
                 continue
 
-            discount_text = discount_block.text.strip().replace('-', '').replace('%', '')
-            try:
-                discount = int(discount_text)
-            except ValueError:
+            discount_pct = discount_block.select_one('.discount_pct')
+            if not discount_pct:
                 continue
 
-            # Перевіряємо, чи знижка 90% або більшев
-            if discount >= 90:
-                # Отримуємо назву гри
-                title_block = block.select_one('.salepreviewwidgets_StoreSaleWidgetTitle')
-                title = title_block.text.strip() if title_block else "Без назви"
+            discount_value = int(discount_pct.text.strip().replace('-', '').replace('%', ''))
+            if discount_value >= 90:
+                original_price = discount_block.select_one('.discount_original_price')
+                final_price = discount_block.select_one('.discount_final_price')
+                link = game['href'].split('?')[0]
 
-                # Отримуємо ціни
-                final_price_block = block.select_one('.salepreviewwidgets_StoreOriginalPrice')
-                final_price = final_price_block.text.strip() if final_price_block else "?"
-
-                original_price_block = block.select_one('.salepreviewwidgets_StoreDiscountedPrice')
-                original_price = original_price_block.text.strip() if original_price_block else final_price
-
-                # Отримуємо посилання на гру
-                game_link = block.find('a', href=True)
-                if game_link:
-                    link = game_link['href'].split('?')[0]  # Беремо чистий URL без параметрів
-                    title = f'<a href="{link}">{title}</a>'
-
-                discount_games.append(f"{title}: -{discount}% → {final_price} (було {original_price})")
-            else:
-                print(f"посилання {url}")
+                discount_games.append(
+                    f'<a href="{link}">{title}</a>: -{discount_value}% → {final_price.text.strip()} (було {original_price.text.strip()})'
+                )
 
         return discount_games[:20] if discount_games else None
 
