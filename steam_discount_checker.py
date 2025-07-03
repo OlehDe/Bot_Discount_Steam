@@ -81,15 +81,19 @@ def get_free_games():
         soup = BeautifulSoup(data['results_html'], 'html.parser')
 
         free_games = []
+
         for game in soup.select('a.search_result_row'):
             title = game.select_one('.title').text.strip()
-            price_block = game.select_one('.search_price')
-            if price_block:
-                original_price = price_block.find('span', {'style': 'color: #888888;'})
-                original_price = original_price.text.strip() if original_price else "?"
-                free_games.append(f"{title}: 🎉 <b>Безкоштовно</b> (було {original_price})")
+            discount_block = game.select_one('.search_discount_block')
+            if discount_block:
+                discount_pct = discount_block.select_one('.discount_pct')
+                if discount_pct and "-100%" in discount_pct.text:
+                    original_price = discount_block.select_one('.discount_original_price')
+                    original_price_text = original_price.text.strip() if original_price else "?"
+                    free_games.append(f"{title}: 🎉 <b>Безкоштовно</b> (було {original_price_text})")
 
         return free_games if free_games else None
+
     except Exception as e:
         print(f"Помилка при отриманні безкоштовних ігор: {e}")
         return None
