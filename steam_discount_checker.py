@@ -124,7 +124,7 @@ def get_90_discount_games():
             except ValueError:
                 continue
 
-            # Перевіряємо, чи знижка 90% або більше
+            # Перевіряємо, чи знижка 90% або більшев
             if discount >= 90:
                 # Отримуємо назву гри
                 title_block = block.select_one('.salepreviewwidgets_StoreSaleWidgetTitle')
