@@ -152,9 +152,37 @@ def get_90_discount_games():
         return None
 
 def show_rozdacha():
-    url = "https://store.steampowered.com/sale/special_deals"
-    message = f"Розпродажі {url}"
-    print(message)
+    url = "https://store.steampowered.com/search/results/?query&start=0&count=20&dynamic_data=&sort_by=Discount_DESC&snr=1_7_7_230_7&specials=1&infinite=1"
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Language": "uk-UA,uk;q=0.9"
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        soup = BeautifulSoup(data["results_html"], "html.parser")
+
+        result = "🔥 <b>Розпродаж у Steam:</b>\n\n"
+
+        for game in soup.select("a.search_result_row")[:10]:
+            title = game.select_one(".title").text.strip()
+            discount_block = game.select_one(".search_discount_block")
+            discount_pct = discount_block.select_one(".discount_pct").text.strip() if discount_block else ""
+            original_price = discount_block.select_one(".discount_original_price").text.strip() if discount_block else "?"
+            final_price = discount_block.select_one(".discount_final_price").text.strip() if discount_block else "0,00₴"
+            link = game['href'].split("?")[0]
+
+            result += f'• <a href="{link}">{title}</a>: {discount_pct} → {final_price} (було {original_price})\n'
+
+        print(result)
+        return result
+
+    except Exception as e:
+        print(f"Помилка при отриманні розпродажів: {e}")
+        return "Не вдалося отримати розпродажі 😢"
+
 
 # Стартова команда
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
