@@ -144,6 +144,8 @@ def get_90_discount_games():
                     title = f'<a href="{link}">{title}</a>'
 
                 discount_games.append(f"{title}: -{discount}% → {final_price} (було {original_price})")
+            else:
+                print(f"посилання {url}")
 
         return discount_games[:20] if discount_games else None
 
