@@ -197,7 +197,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if games:
             message = "💯 <b>Ігри зі знижкою 90% і більше:</b>\n" + "\n".join(games)
         else:
-            message = "Зараз немає ігор зі знижкою 90% 😢"
+            url = "https://store.steampowered.com/sale/special_deals"
+            message = f"Зараз немає ігор зі знижкою 90% 😢 {url}"
         await query.edit_message_text(message, parse_mode="HTML")
 
 
