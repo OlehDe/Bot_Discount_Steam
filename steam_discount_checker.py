@@ -152,7 +152,7 @@ def get_90_discount_games():
         return None
 
 def show_rozdacha():
-    url = "https://store.steampowered.com/search/results/?query&start=0&count=20&dynamic_data=&sort_by=Discount_DESC&snr=1_7_7_230_7&specials=1&infinite=1"
+    url = "https://store.steampowered.com/sale/special_deals"
     headers = {
         "User-Agent": "Mozilla/5.0",
         "Accept-Language": "uk-UA,uk;q=0.9"
@@ -230,6 +230,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             url = "https://store.steampowered.com/sale/special_deals"
             message = f"Зараз немає ігор зі знижкою 90% 😢 {url}"
+        await query.edit_message_text(message, parse_mode="HTML")
+
+    elif query.data == "show_rozdacha":
+        games = get_90_discount_games()
+        if games:
+            message = "💯 <b>Ігри зі знижкою 90% і більше:</b>\n" + "\n".join(games)
+        else:
+            url = "https://store.steampowered.com/sale/special_deals"
+            message = f"👌 Роздача {url}"
         await query.edit_message_text(message, parse_mode="HTML")
 
 
