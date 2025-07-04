@@ -153,7 +153,7 @@ def get_90_discount_games():
 
 def show_rozdacha():
     url = "https://store.steampowered.com/sale/special_deals"
-    return f"🛍️ <b>Steam розпродаж:</b>\n<a href='{url}'>Переглянути знижки тут</a>"
+    return f'🛍️ <b>Steam розпродаж:</b>\n<a href="{url}">Переглянути знижки тут</a>'
 
 # Стартова команда
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
