@@ -235,7 +235,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "show_rozdacha":
         games = get_90_discount_games()
         if games:
-            message = "💯 <b>Ігри зі знижкою 90% і більше:</b>\n" + "\n".join(games)
+            message = "👌 Роздача:</b>\n" + "\n".join(games)
         else:
             url = "https://store.steampowered.com/sale/special_deals"
             message = f"👌 Роздача {url}"
